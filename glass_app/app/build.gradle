@@ -1,0 +1,42 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 34
+
+    defaultConfig {
+        applicationId "com.glasscam"
+        // Google Glass XE runs Android 4.4 (API 19) at minimum.
+        // Glass Enterprise Edition 2 runs Android 8.1 (API 27).
+        minSdkVersion 19
+        targetSdkVersion 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false  // keep it easy to debug on device
+        }
+        debug {
+            debuggable true
+        }
+    }
+
+    // Suppress deprecation warnings for Camera1 API — it's the only API
+    // available on Glass XE without the GDK camera extension.
+    lintOptions {
+        disable 'Deprecation'
+        abortOnError false
+    }
+}
+
+dependencies {
+    // No external dependencies — Camera1, HttpURLConnection, and TTS are
+    // all part of the Android framework, keeping the APK small and avoiding
+    // Proguard / R8 complexity on older Glass firmware.
+}
