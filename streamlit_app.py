@@ -1,6 +1,7 @@
 import io
 import os
 import subprocess
+import sys
 import tempfile
 import zipfile
 
@@ -73,7 +74,7 @@ if st.button("Download All Videos", type="primary", use_container_width=True):
 
     with tempfile.TemporaryDirectory() as tmpdir:
         cmd = [
-            "yt-dlp",
+            sys.executable, "-m", "yt_dlp",
             "--newline",
             "--no-warnings",
             "-f", quality,
@@ -114,7 +115,7 @@ if st.button("Download All Videos", type="primary", use_container_width=True):
 
             process.wait()
         except FileNotFoundError:
-            st.error("yt-dlp not found. Run: `pip install yt-dlp`")
+            st.error("yt-dlp not found. Run: `pip3 install yt-dlp`")
             st.stop()
 
         downloaded = [
