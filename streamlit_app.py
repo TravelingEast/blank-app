@@ -52,7 +52,6 @@ with st.expander("Download Options"):
         )
     with col2:
         limit = st.number_input("Max videos (0 = all)", min_value=0, value=0, step=10)
-    write_metadata = st.checkbox("Embed metadata (title, description, thumbnail)", value=True)
 
 # --- Download ---
 if st.button("Download All Videos", type="primary", use_container_width=True):
@@ -81,8 +80,6 @@ if st.button("Download All Videos", type="primary", use_container_width=True):
             "-o", os.path.join(tmpdir, "%(uploader)s_%(title).50s_%(id)s.%(ext)s"),
         ]
 
-        if write_metadata:
-            cmd += ["--embed-thumbnail", "--add-metadata"]
 
         if limit > 0:
             cmd += ["--playlist-end", str(limit)]
