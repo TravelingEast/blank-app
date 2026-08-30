@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+FN:Jim Robinson
+N:Robinson;Jim;;;
+TITLE:Director of Marketing, North America
+ORG:Meteomatics
+TEL;TYPE=CELL:+1-305-878-5566
+EMAIL;TYPE=INTERNET:jrobinson@meteomatics.com
+URL:https://www.meteomatics.com
+REV:2026-08-30T00:00:00Z
+END:VCARD
