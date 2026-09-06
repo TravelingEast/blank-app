@@ -1,8 +1,9 @@
 import streamlit as st
-import requests
 import socket
-from typing import Optional, Dict, List
+import base64
 import json
+from typing import Optional, Dict, List
+import time
 
 st.set_page_config(page_title="Samsung TV Controller", layout="wide")
 
@@ -13,54 +14,52 @@ class SamsungTVController:
     def __init__(self, ip: str, port: int = 8002):
         self.ip = ip
         self.port = port
-        self.base_url = f"http://{ip}:{port}"
-        self.session = requests.Session()
+        self.sock = None
 
-    def send_command(self, command: str, payload: Optional[Dict] = None) -> bool:
+    def _send_raw_command(self, command: str) -> bool:
         try:
-            url = f"{self.base_url}/api/v2/{command}"
-            headers = {"Content-Type": "application/json"}
-            response = self.session.post(url, json=payload or {}, headers=headers, timeout=2)
-            return response.status_code in [200, 201]
+            if self.sock is None:
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.sock.settimeout(3)
+                self.sock.connect((self.ip, self.port))
+
+            self.sock.sendall(command.encode())
+            time.sleep(0.1)
+            return True
         except Exception as e:
-            st.error(f"Failed to send command: {str(e)}")
+            self.sock = None
+            st.error(f"Connection failed: {str(e)}")
             return False
 
     def volume_up(self) -> bool:
-        return self.send_command("keypad/hold/KEY_VOL_UP", {})
+        return self._send_key("KEY_VOL_UP")
 
     def volume_down(self) -> bool:
-        return self.send_command("keypad/hold/KEY_VOL_DOWN", {})
+        return self._send_key("KEY_VOL_DOWN")
 
-    def set_volume(self, level: int) -> bool:
-        return self.send_command("keypad/hold/KEY_VOL_DOWN", {})
-
-    def get_volume(self) -> Optional[int]:
+    def _send_key(self, key: str) -> bool:
         try:
-            response = self.session.get(f"{self.base_url}/api/v2/channels/currentChannel", timeout=2)
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("volumeLevel")
-        except:
-            pass
-        return None
-
-    def get_inputs(self) -> List[Dict]:
-        try:
-            response = self.session.get(f"{self.base_url}/api/v2/channels", timeout=2)
-            if response.status_code == 200:
-                return response.json()
-        except:
-            pass
-        return []
-
-    def change_input(self, input_id: str) -> bool:
-        return self.send_command(f"channels/{input_id}", {})
+            payload = {
+                "method": "ms.remote.control",
+                "params": {
+                    "Cmd": "Click",
+                    "DataOfCmd": key,
+                    "TypeOfRemote": "SendRemoteKey"
+                }
+            }
+            msg = json.dumps(payload)
+            return self._send_raw_command(msg)
+        except Exception as e:
+            st.error(f"Failed to send key: {str(e)}")
+            return False
 
     def is_alive(self) -> bool:
         try:
-            response = self.session.get(f"{self.base_url}/api/v2/", timeout=1)
-            return response.status_code == 200
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex((self.ip, self.port))
+            sock.close()
+            return result == 0
         except:
             return False
 
@@ -146,25 +145,28 @@ else:
 
     with col2:
         st.subheader("📺 Input/Source Control")
-        if st.button("🔄 Get Available Inputs", key="get_inputs"):
-            try:
-                inputs = controller.get_inputs()
-                if inputs:
-                    st.write("Available inputs:")
-                    for inp in inputs[:10]:  # Limit display
-                        col_name, col_btn = st.columns([3, 1])
-                        with col_name:
-                            st.write(inp.get("name", "Unknown"))
-                        with col_btn:
-                            if st.button("Switch", key=f"input_{inp.get('id', '')}"):
-                                if controller.change_input(inp.get("id", "")):
-                                    st.success(f"Switched to {inp.get('name', 'input')}")
-                                else:
-                                    st.error("Failed to switch input")
+        input_col1, input_col2, input_col3 = st.columns(3)
+
+        with input_col1:
+            if st.button("📺 HDMI 1", key="hdmi1"):
+                if controller._send_key("KEY_HDMI"):
+                    st.success("Switched to HDMI")
                 else:
-                    st.info("No inputs found or TV unreachable")
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+                    st.error("Failed to switch input")
+
+        with input_col2:
+            if st.button("📺 HDMI 2", key="hdmi2"):
+                if controller._send_key("KEY_HDMI1"):
+                    st.success("Switched to HDMI 2")
+                else:
+                    st.error("Failed to switch input")
+
+        with input_col3:
+            if st.button("📺 TV/Cable", key="tvcable"):
+                if controller._send_key("KEY_TV"):
+                    st.success("Switched to TV")
+                else:
+                    st.error("Failed to switch input")
 
     st.divider()
 
@@ -173,22 +175,22 @@ else:
     quick_col1, quick_col2, quick_col3 = st.columns(3)
 
     with quick_col1:
-        if st.button("Power Off", key="power_off"):
-            if controller.send_command("keypad/hold/KEY_POWER", {}):
+        if st.button("🔴 Power Off", key="power_off"):
+            if controller._send_key("KEY_POWER"):
                 st.success("Power command sent")
             else:
                 st.error("Failed to send power command")
 
     with quick_col2:
-        if st.button("Mute", key="mute"):
-            if controller.send_command("keypad/hold/KEY_MUTE", {}):
+        if st.button("🔇 Mute", key="mute"):
+            if controller._send_key("KEY_MUTE"):
                 st.success("Mute toggled")
             else:
                 st.error("Failed to mute")
 
     with quick_col3:
-        if st.button("Home", key="home"):
-            if controller.send_command("keypad/hold/KEY_HOME", {}):
+        if st.button("🏠 Home", key="home"):
+            if controller._send_key("KEY_HOME"):
                 st.success("Home pressed")
             else:
                 st.error("Failed to go home")
