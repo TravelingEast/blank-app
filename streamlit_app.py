@@ -93,6 +93,7 @@ with st.sidebar:
     st.header("📱 Connection Settings")
 
     connection_method = st.radio("Connect to TV:", ["Manual IP", "Auto Discover"])
+    tv_ip = ""
 
     if connection_method == "Manual IP":
         tv_ip = st.text_input("TV IP Address", "192.168.1.", placeholder="e.g., 192.168.1.100")
@@ -106,6 +107,8 @@ with st.sidebar:
             else:
                 st.warning("No TVs found. Try manual connection.")
                 tv_ip = st.text_input("TV IP Address", placeholder="e.g., 192.168.1.100")
+        else:
+            tv_ip = st.text_input("TV IP Address", placeholder="e.g., 192.168.1.100")
 
     if tv_ip and st.button("🔗 Connect", key="connect_btn"):
         st.session_state.tv_ip = tv_ip
